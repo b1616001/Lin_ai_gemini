@@ -1,0 +1,6 @@
+{
+  "name": "相機",
+  "description": "具備拍照、儲存與刪除功能的相機應用程式",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
