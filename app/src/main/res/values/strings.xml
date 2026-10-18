@@ -24,4 +24,20 @@
     <string name="photo_info">照片資訊</string>
     <string name="file_size">檔案大小</string>
     <string name="captured_time">拍攝時間</string>
+    <string name="logo_text">Lin</string>
+    <string name="logo_subtitle">AI Camera Experience</string>
+    <string name="home_title">Lin 首頁</string>
+    <string name="home_subtitle">功能總覽</string>
+    <string name="menu_languages">多國語系</string>
+    <string name="menu_languages_desc">切換介面語言 (繁體中文 / English / 日本語)</string>
+    <string name="menu_camera">相機</string>
+    <string name="menu_camera_desc">拍照、儲存與刪除相片</string>
+    <string name="select_language_title">選擇語言</string>
+    <string name="back">返回</string>
+    <string name="lang_zh_tw">繁體中文 (Traditional Chinese)</string>
+    <string name="lang_en">English</string>
+    <string name="lang_ja">日本語 (Japanese)</string>
+    <string name="lang_zh_cn">簡體中文 (Simplified Chinese)</string>
+    <string name="current_language_label">目前語言：%1$s</string>
+    <string name="language_changed_toast">已切換至：%1$s</string>
 </resources>

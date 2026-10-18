@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/logoRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    android:tag="logo_fragment_root">
+
+    <!-- Center Container for Logo: 黑底藍字 Lin -->
+    <LinearLayout
+        android:id="@+id/layoutLogoCenter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- Lin Logo Text in Vibrant Blue -->
+        <TextView
+            android:id="@+id/tvLogoText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.08"
+            android:shadowColor="@color/lin_blue_dark"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="24"
+            android:text="@string/logo_text"
+            android:textColor="@color/lin_blue"
+            android:textSize="64sp"
+            android:textStyle="bold"
+            tools:text="Lin" />
+
+        <TextView
+            android:id="@+id/tvLogoSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:letterSpacing="0.15"
+            android:text="@string/logo_subtitle"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:textStyle="normal" />
+
+    </LinearLayout>
+
+    <!-- Subtle countdown / prompt at bottom -->
+    <TextView
+        android:id="@+id/tvLogoTimerHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="40dp"
+        android:text="3s..."
+        android:textColor="#66FFFFFF"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

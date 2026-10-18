@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">カメラ</string>
+    <string name="camera_permission_required">カメラの権限が必要です</string>
+    <string name="grant_permission">権限を許可</string>
+    <string name="permission_denied_message">写真を撮影するにはカメラの権限が必要です。下のボタンをタップして許可してください。</string>
+    <string name="take_photo">撮影</string>
+    <string name="switch_camera">カメラ切り替え</string>
+    <string name="gallery_title">撮影した写真</string>
+    <string name="no_photos_yet">まだ写真がありません。最初の1枚を撮影してみましょう！</string>
+    <string name="photo_saved_success">写真を保存しました！</string>
+    <string name="photo_save_failed">写真の保存に失敗しました：%1$s</string>
+    <string name="photo_deleted_success">写真を削除しました</string>
+    <string name="photo_delete_failed">写真の削除に失敗しました</string>
+    <string name="delete_photo_confirm_title">削除の確認</string>
+    <string name="delete_photo_confirm_message">この写真を削除してもよろしいですか？この操作は元に戻せません。</string>
+    <string name="confirm">確定</string>
+    <string name="cancel">キャンセル</string>
+    <string name="delete">削除</string>
+    <string name="flash_auto">フラッシュ 自動</string>
+    <string name="flash_on">フラッシュ オン</string>
+    <string name="flash_off">フラッシュ オフ</string>
+    <string name="view_gallery">ギャラリー</string>
+    <string name="close">閉じる</string>
+    <string name="photo_info">写真情報</string>
+    <string name="file_size">ファイルサイズ</string>
+    <string name="captured_time">撮影日時</string>
+    <string name="logo_text">Lin</string>
+    <string name="logo_subtitle">AI Camera Experience</string>
+    <string name="home_title">Lin ホーム</string>
+    <string name="home_subtitle">機能一覧</string>
+    <string name="menu_languages">多言語設定</string>
+    <string name="menu_languages_desc">表示言語の切り替え (繁中 / English / 日本語)</string>
+    <string name="menu_camera">カメラ</string>
+    <string name="menu_camera_desc">写真の撮影・保存・削除</string>
+    <string name="select_language_title">言語を選択</string>
+    <string name="back">戻る</string>
+    <string name="lang_zh_tw">繁體中文 (Traditional Chinese)</string>
+    <string name="lang_en">English</string>
+    <string name="lang_ja">日本語 (Japanese)</string>
+    <string name="lang_zh_cn">簡體中文 (Simplified Chinese)</string>
+    <string name="current_language_label">現在の言語：%1$s</string>
+    <string name="language_changed_toast">切り替え完了：%1$s</string>
+</resources>
