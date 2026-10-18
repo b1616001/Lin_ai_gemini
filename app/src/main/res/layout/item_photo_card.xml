@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardBackgroundColor="@color/card_background"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:strokeColor="#22FFFFFF"
+    app:strokeWidth="1dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- Square Aspect Ratio Image Container -->
+        <ImageView
+            android:id="@+id/ivPhotoThumbnail"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:contentDescription="@string/gallery_title"
+            android:scaleType="centerCrop"
+            app:layout_constraintDimensionRatio="1:1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:src="@drawable/ic_launcher_background" />
+
+        <!-- Gradient protection at bottom for text -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:background="#88000000"
+            app:layout_constraintBottom_toBottomOf="@+id/ivPhotoThumbnail"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Timestamp / file size text -->
+        <TextView
+            android:id="@+id/tvPhotoTime"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginBottom="6dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/text_primary"
+            android:textSize="11sp"
+            app:layout_constraintBottom_toBottomOf="@+id/ivPhotoThumbnail"
+            app:layout_constraintEnd_toStartOf="@+id/btnItemDelete"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:text="14:25:30" />
+
+        <!-- Delete button directly on item card -->
+        <ImageButton
+            android:id="@+id/btnItemDelete"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginBottom="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/delete"
+            android:padding="5dp"
+            android:src="@drawable/ic_delete"
+            app:layout_constraintBottom_toBottomOf="@+id/ivPhotoThumbnail"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:tint="@color/delete_red" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>
