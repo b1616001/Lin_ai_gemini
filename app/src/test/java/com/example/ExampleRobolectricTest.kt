@@ -14,16 +14,18 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 
 /**
- * 核心業務邏輯、CameraUtils 與畫面導航 Robolectric 本地 JVM 單元測試
+ * 核心業務邏輯、CameraUtils、PhotoAdapter 與畫面導航 Robolectric 本地 JVM 單元測試
  *
  * 用途：
  * 1. 驗證應用程式字串資源與語系載入
  * 2. 驗證 [PhotoRepository] 與 [CameraUtils] 本地檔案產生與命名規則
  * 3. 驗證 [CameraUtils] 鏡頭方向切換與閃光燈循環邏輯
- * 4. 驗證 Navigation 導覽圖初始目的地為 [LogoFragment]
- * 5. 驗證導覽路徑：LogoFragment -> HomeFragment -> CameraFragment -> 回到 HomeFragment
+ * 4. 驗證 [PhotoAdapter] 圖片清單提交與項目數量計算
+ * 5. 驗證 Navigation 導覽圖初始目的地為 [LogoFragment]
+ * 6. 驗證導覽路徑：LogoFragment -> HomeFragment -> CameraFragment -> 回到 HomeFragment
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -81,6 +83,33 @@ class ExampleRobolectricTest {
     // 驗證刪除不存在檔案回傳 false
     val item = PhotoItem(photoFile)
     assertFalse(cameraUtils.deletePhoto(item))
+  }
+
+  /**
+   * 測試 PhotoAdapter 圖片列表資料綁定與清單提交更新
+   */
+  @Test
+  fun `verify PhotoAdapter displays photo list`() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val fakeFile1 = File(context.cacheDir, "test1.jpg").apply { createNewFile() }
+    val fakeFile2 = File(context.cacheDir, "test2.jpg").apply { createNewFile() }
+
+    val photoList = listOf(PhotoItem(fakeFile1), PhotoItem(fakeFile2))
+
+    val adapter = PhotoAdapter(
+      isHorizontal = true,
+      onPhotoClick = {},
+      onDeleteClick = {}
+    )
+
+    adapter.submitList(photoList)
+    assertEquals(2, adapter.itemCount)
+    assertEquals(fakeFile1.absolutePath, adapter.currentList[0].file.absolutePath)
+    assertEquals(fakeFile2.absolutePath, adapter.currentList[1].file.absolutePath)
+
+    // 清理暫存檔
+    fakeFile1.delete()
+    fakeFile2.delete()
   }
 
   /**

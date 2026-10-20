@@ -1,15 +1,21 @@
 package com.example.Fragment
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Dialog
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.view.Window
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraInfo
@@ -19,6 +25,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.CameraUtils
 import com.example.ImageLoaderUtils
 import com.example.PhotoAdapter
@@ -35,14 +42,14 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * 相機拍攝與相簿管理畫面
+ * 相機拍攝、即時照片清單與全螢幕大圖展示畫面
  *
  * 用途：
  * 1. 繼承 [BaseBindingFragment]，使用 ViewBinding 自動管理視圖
- * 2. 透過 [CameraUtils] 整合相機生命週期、預覽、拍照、儲存、刪除與照片查詢等核心功能
- * 3. 處理相機動態權限請求、前後鏡頭切換動畫、閃光燈模式提示
- * 4. 支援雙指縮放 (Pinch to zoom) 與點擊測光對焦動畫 (Tap to focus)
- * 5. 即時更新最新相片縮圖、拍攝張數徽章，並提供底部相簿 (BottomSheetDialog) 與全螢幕大圖檢視
+ * 2. 【縮圖點擊放出整張圖片】：點擊任意縮圖（相機主畫面縮圖、水平相片條或相簿網格）皆可立即放大展示全螢幕大圖
+ * 3. 大圖檢視支援點擊隱藏/顯示操作列、雙指縮放檢視細節、刪除照片以及快速前往相簿
+ * 4. 透過 [CameraUtils] 管理 CameraX 生命週期、即時預覽、拍照存檔、安全刪除與手勢對焦/縮放
+ * 5. 透過 [PhotoAdapter] 在相機畫面上即時以橫向捲動列表展示所有已拍攝相片
  */
 class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
 
@@ -50,6 +57,11 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
      * 相機與相片工具類別，封裝相機拍照、檔案儲存、刪除與查詢功能
      */
     private lateinit var cameraUtils: CameraUtils
+
+    /**
+     * 相機畫面上橫向捲動相片列表配接器 (PhotoAdapter)
+     */
+    private lateinit var cameraPhotoAdapter: PhotoAdapter
 
     /**
      * CameraX 背景拍照任務執行緒池
@@ -113,18 +125,45 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
     }
 
     /**
-     * 視圖初始化：建立 CameraUtils、執行緒池、檢查權限並載入歷史照片縮圖
+     * 視圖初始化：建立 CameraUtils、初始化 PhotoAdapter 圖片列表、檢查權限並載入已拍攝照片
      */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 初始化 CameraUtils 工具類別
+        // 初始化 CameraUtils
         cameraUtils = CameraUtils(requireContext())
         cameraExecutor = Executors.newSingleThreadExecutor()
 
+        setupPhotoListAdapter()
         checkCameraPermission()
         setupListeners()
-        updateRecentThumbnail()
+        refreshPhotoLists()
+    }
+
+    /**
+     * 初始化相機主畫面上的 PhotoAdapter 水平圖片列表
+     */
+    private fun setupPhotoListAdapter() {
+        val b = binding ?: return
+
+        cameraPhotoAdapter = PhotoAdapter(
+            coroutineScope = viewLifecycleOwner.lifecycleScope,
+            isHorizontal = true,
+            onPhotoClick = { photo ->
+                // 點擊縮圖：立即放大全螢幕檢視整張圖片
+                showPhotoDetailDialog(photo)
+            },
+            onDeleteClick = { photo ->
+                showDeleteConfirmDialog(photo) {
+                    refreshPhotoLists()
+                }
+            }
+        )
+
+        b.rvCameraPhotoList.apply {
+            layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+            adapter = cameraPhotoAdapter
+        }
     }
 
     /**
@@ -164,6 +203,7 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
             b.layoutPermission.visibility = View.VISIBLE
             b.topBar.visibility = View.GONE
             b.bottomBar.visibility = View.GONE
+            b.rvCameraPhotoList.visibility = View.GONE
         }
     }
 
@@ -198,9 +238,20 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
             toggleFlashMode()
         }
 
-        // 點擊左下角縮圖開啟相簿彈窗
+        // 點擊左下角縮圖：若有相片則立即放大展示整張大圖，若無相片則開啟相簿
         b.layoutGallery.setOnClickListener {
+            val latest = cameraUtils.getLatestPhoto()
+            if (latest != null) {
+                showPhotoDetailDialog(latest)
+            } else {
+                openGalleryBottomSheet()
+            }
+        }
+
+        // 長按左下角縮圖開啟完整相簿底部彈窗
+        b.layoutGallery.setOnLongClickListener {
             openGalleryBottomSheet()
+            true
         }
 
         // 快速刪除最新一張照片
@@ -224,7 +275,6 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
             requireContext(),
             object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
                 override fun onScale(detector: ScaleGestureDetector): Boolean {
-                    // 透過 CameraUtils 套用縮放比例
                     cameraUtils.applyZoom(cameraControl, cameraInfo, detector.scaleFactor)
                     return true
                 }
@@ -238,10 +288,7 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
                 val factory = b.viewFinder.meteringPointFactory
                 val point = factory.createPoint(event.x, event.y)
 
-                // 透過 CameraUtils 觸發測光對焦
                 cameraUtils.triggerFocusAndMetering(cameraControl, point)
-
-                // 於點擊座標展示對焦圓環動畫
                 showFocusRing(event.x, event.y)
                 view.performClick()
             }
@@ -334,8 +381,9 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
                             getString(R.string.photo_saved_success),
                             Toast.LENGTH_SHORT
                         ).show()
-                        // 拍照儲存完成後更新最新縮圖
-                        updateRecentThumbnail()
+                        // 拍照儲存完成後刷新相片列表並自動滾動到最前頭
+                        refreshPhotoLists()
+                        binding?.rvCameraPhotoList?.smoothScrollToPosition(0)
                     }
                 }
             },
@@ -393,15 +441,27 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
     }
 
     /**
-     * 透過 CameraUtils 讀取最新相片，更新左下角縮圖與照片張數徽章
+     * 刷新相片列表顯示：
+     * 1. 更新相機畫面上的水平 PhotoAdapter 圖片列表
+     * 2. 更新左下角最新縮圖與張數徽章
      */
-    private fun updateRecentThumbnail() {
+    private fun refreshPhotoLists() {
         val b = binding ?: return
         if (!isAdded) return
 
         val photos = cameraUtils.getAllPhotos()
-        val latest = cameraUtils.getLatestPhoto()
+        val latest = photos.firstOrNull()
 
+        // 1. 更新相機畫面上的橫向相片列表
+        if (photos.isNotEmpty()) {
+            b.rvCameraPhotoList.visibility = View.VISIBLE
+            cameraPhotoAdapter.submitList(photos)
+        } else {
+            b.rvCameraPhotoList.visibility = View.GONE
+            cameraPhotoAdapter.submitList(emptyList())
+        }
+
+        // 2. 更新左下角最新縮圖與數量徽章
         if (latest != null && latest.file.exists()) {
             b.tvPhotoCountBadge.text = photos.size.toString()
             b.tvPhotoCountBadge.visibility = View.VISIBLE
@@ -426,23 +486,28 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
 
     /**
      * 開啟底部彈出式相簿 (BottomSheetDialog)
-     * 透過 CameraUtils 取得歷史相片清單，支援點擊檢視與刪除
+     * 使用 PhotoAdapter 以 3 欄網格展示歷史所有照片
      */
     private fun openGalleryBottomSheet() {
         val context = requireContext()
         val dialog = BottomSheetDialog(context, R.style.Theme_MyApplication)
         activeGalleryDialog = dialog
+
         val sheetBinding = BottomSheetGalleryBinding.inflate(layoutInflater)
         dialog.setContentView(sheetBinding.root)
 
         lateinit var adapter: PhotoAdapter
         adapter = PhotoAdapter(
+            coroutineScope = viewLifecycleOwner.lifecycleScope,
+            isHorizontal = false,
             onPhotoClick = { photo ->
+                // 點擊相簿網格縮圖：立即放大全螢幕展示整張大圖
                 showPhotoDetailDialog(photo)
             },
             onDeleteClick = { photo ->
                 showDeleteConfirmDialog(photo) {
                     refreshGalleryList(sheetBinding, adapter)
+                    refreshPhotoLists()
                 }
             }
         )
@@ -488,42 +553,121 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
     ) {
         val updatedPhotos = cameraUtils.getAllPhotos()
         updateGalleryUI(sheetBinding, updatedPhotos, adapter)
-        updateRecentThumbnail()
+        refreshPhotoLists()
     }
 
     /**
-     * 顯示全螢幕相片詳情彈窗
+     * 【縮圖點擊放出整張圖片】：開啟全螢幕大圖檢視對話框
+     *
+     * 特色：
+     * 1. 滿版無黑邊全螢幕展示大圖
+     * 2. 先秒開低延遲縮圖，隨後平滑載入原圖細節，無白屏或延遲感
+     * 3. 支援單指點擊隱藏/顯示操作列（沉浸式體驗）
+     * 4. 支援雙指手勢縮放 (Pinch to zoom) 與雙擊放大/還原
+     * 5. 頂部提供關閉、照片資訊、直接開啟相簿總覽與刪除按鈕
      *
      * @param photo 點選的照片物件
      */
+    @SuppressLint("ClickableViewAccessibility")
     private fun showPhotoDetailDialog(photo: PhotoItem) {
         val context = requireContext()
-        val dialog = AlertDialog.Builder(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-            .create()
+        val dialog = Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
 
         val detailBinding = DialogPhotoDetailBinding.inflate(layoutInflater)
-        dialog.setView(detailBinding.root)
+        dialog.setContentView(detailBinding.root)
+
+        // 設定視窗全螢幕填滿與背景為黑色
+        dialog.window?.apply {
+            setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
+            setBackgroundDrawable(ColorDrawable(Color.BLACK))
+            clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        }
 
         detailBinding.tvDetailFileName.text = photo.name
         detailBinding.tvDetailMeta.text = "${photo.formattedDateTime()} • ${photo.formattedSize()}"
 
+        // 關閉大圖檢視
         detailBinding.btnDetailClose.setOnClickListener {
             dialog.dismiss()
         }
 
+        // 開啟完整相簿總覽
+        detailBinding.btnDetailGallery.setOnClickListener {
+            dialog.dismiss()
+            openGalleryBottomSheet()
+        }
+
+        // 刪除大圖照片
         detailBinding.btnDetailDelete.setOnClickListener {
             showDeleteConfirmDialog(photo) {
                 dialog.dismiss()
                 activeGalleryDialog?.dismiss()
-                updateRecentThumbnail()
+                refreshPhotoLists()
             }
         }
 
-        // 非同步讀取並優化載入高解析度預覽
+        // 點擊照片切換頂部控制列顯示/隱藏
+        var isBarVisible = true
+        fun toggleTopBar() {
+            isBarVisible = !isBarVisible
+            detailBinding.detailTopBar.animate()
+                .alpha(if (isBarVisible) 1f else 0f)
+                .translationY(if (isBarVisible) 0f else -detailBinding.detailTopBar.height.toFloat())
+                .setDuration(200)
+                .start()
+        }
+
+        // 設置雙擊放大與單擊切換頂部列手勢監聽
+        var currentScale = 1.0f
+        val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                toggleTopBar()
+                return true
+            }
+
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                currentScale = if (currentScale > 1.2f) 1.0f else 2.2f
+                detailBinding.ivFullPhoto.animate()
+                    .scaleX(currentScale)
+                    .scaleY(currentScale)
+                    .setDuration(250)
+                    .start()
+                return true
+            }
+        })
+
+        // 支援雙指手勢縮放大圖
+        val scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                currentScale *= detector.scaleFactor
+                currentScale = currentScale.coerceIn(0.8f, 4.0f)
+                detailBinding.ivFullPhoto.scaleX = currentScale
+                detailBinding.ivFullPhoto.scaleY = currentScale
+                return true
+            }
+        })
+
+        detailBinding.ivFullPhoto.setOnTouchListener { _, event ->
+            scaleDetector.onTouchEvent(event)
+            gestureDetector.onTouchEvent(event)
+            true
+        }
+
+        // 步驟 1：先立即載入低解析度縮圖（秒開，無黑屏等待）
         viewLifecycleOwner.lifecycleScope.launch {
-            val bitmap = ImageLoaderUtils.loadBitmapSampled(photo.file, 1080, 1920)
-            if (bitmap != null) {
-                detailBinding.ivFullPhoto.setImageBitmap(bitmap)
+            val quickThumb = ImageLoaderUtils.loadBitmapSampled(photo.file, 300, 300)
+            if (quickThumb != null) {
+                detailBinding.ivFullPhoto.setImageBitmap(quickThumb)
+            }
+
+            // 步驟 2：背景非同步載入原解析度相片並更新
+            detailBinding.pbDetailLoading.visibility = View.VISIBLE
+            val metrics = resources.displayMetrics
+            val fullBitmap = ImageLoaderUtils.loadBitmapSampled(photo.file, metrics.widthPixels, metrics.heightPixels)
+            detailBinding.pbDetailLoading.visibility = View.GONE
+            if (fullBitmap != null) {
+                detailBinding.ivFullPhoto.setImageBitmap(fullBitmap)
             }
         }
 
@@ -543,12 +687,11 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
             .setMessage(R.string.delete_photo_confirm_message)
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.delete) { _, _ ->
-                // 透過 CameraUtils 執行刪除
                 val success = cameraUtils.deletePhoto(photo)
                 if (success) {
                     if (isAdded) {
                         Toast.makeText(requireContext(), getString(R.string.photo_deleted_success), Toast.LENGTH_SHORT).show()
-                        updateRecentThumbnail()
+                        refreshPhotoLists()
                         onDeleted?.invoke()
                     }
                 } else {

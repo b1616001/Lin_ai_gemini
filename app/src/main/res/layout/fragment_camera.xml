@@ -116,6 +116,21 @@
             app:tint="@color/icon_tint" />
     </LinearLayout>
 
+    <!-- Horizontal Photo List (拍照圖片列表) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvCameraPhotoList"
+        android:layout_width="match_parent"
+        android:layout_height="96dp"
+        android:clipToPadding="false"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="4dp"
+        android:visibility="gone"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintBottom_toTopOf="@+id/bottomBar"
+        tools:listitem="@layout/item_photo_card"
+        tools:visibility="visible" />
+
     <!-- Bottom Controls Bar -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/bottomBar"
