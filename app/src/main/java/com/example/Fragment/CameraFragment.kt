@@ -1,4 +1,4 @@
-package com.example
+package com.example.Fragment
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraInfo
@@ -24,6 +25,11 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
+import com.example.ImageLoaderUtils
+import com.example.PhotoAdapter
+import com.example.PhotoItem
+import com.example.PhotoRepository
+import com.example.R
 import com.example.databinding.BottomSheetGalleryBinding
 import com.example.databinding.DialogPhotoDetailBinding
 import com.example.databinding.FragmentCameraBinding
@@ -417,7 +423,7 @@ class CameraFragment : Fragment() {
 
     private fun showPhotoDetailDialog(photo: PhotoItem) {
         val context = requireContext()
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        val dialog = AlertDialog.Builder(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
             .create()
 
         val detailBinding = DialogPhotoDetailBinding.inflate(layoutInflater)

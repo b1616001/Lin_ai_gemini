@@ -1,4 +1,4 @@
-package com.example
+package com.example.Fragment
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -10,6 +10,9 @@ import androidx.core.os.LocaleListCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.HomeAdapter
+import com.example.HomeFeatureItem
+import com.example.R
 import com.example.databinding.FragmentHomeBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.Locale

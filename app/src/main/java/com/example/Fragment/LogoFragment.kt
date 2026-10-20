@@ -1,4 +1,4 @@
-package com.example
+package com.example.Fragment
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.example.R
 import com.example.databinding.FragmentLogoBinding
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
