@@ -1,10 +1,13 @@
 package com.example
 
 import android.content.Context
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
 import androidx.navigation.fragment.NavHostFragment
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -13,13 +16,14 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * 核心業務邏輯與畫面導航 Robolectric 本地 JVM 單元測試
+ * 核心業務邏輯、CameraUtils 與畫面導航 Robolectric 本地 JVM 單元測試
  *
  * 用途：
  * 1. 驗證應用程式字串資源與語系載入
- * 2. 驗證 [PhotoRepository] 本地檔案產生與命名規則
- * 3. 驗證 Navigation 導覽圖初始目的地為 [LogoFragment]
- * 4. 驗證導覽路徑：LogoFragment -> HomeFragment -> CameraFragment -> 回到 HomeFragment
+ * 2. 驗證 [PhotoRepository] 與 [CameraUtils] 本地檔案產生與命名規則
+ * 3. 驗證 [CameraUtils] 鏡頭方向切換與閃光燈循環邏輯
+ * 4. 驗證 Navigation 導覽圖初始目的地為 [LogoFragment]
+ * 5. 驗證導覽路徑：LogoFragment -> HomeFragment -> CameraFragment -> 回到 HomeFragment
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -45,6 +49,38 @@ class ExampleRobolectricTest {
     val photoFile = repository.createNewPhotoFile()
     assertNotNull(photoFile)
     assertEquals("jpg", photoFile.extension)
+  }
+
+  /**
+   * 測試 CameraUtils 拍照路徑建立、鏡頭切換與閃光燈切換功能
+   */
+  @Test
+  fun `verify camera utils operations`() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val cameraUtils = CameraUtils(context)
+
+    // 驗證建立照片檔案
+    val photoFile = cameraUtils.createNewPhotoFile()
+    assertNotNull(photoFile)
+    assertEquals("jpg", photoFile.extension)
+
+    // 驗證鏡頭方向切換
+    val frontFacing = cameraUtils.toggleLensFacing(CameraSelector.LENS_FACING_BACK)
+    assertEquals(CameraSelector.LENS_FACING_FRONT, frontFacing)
+    val backFacing = cameraUtils.toggleLensFacing(CameraSelector.LENS_FACING_FRONT)
+    assertEquals(CameraSelector.LENS_FACING_BACK, backFacing)
+
+    // 驗證閃光燈模式切換循環：AUTO -> ON -> OFF -> AUTO
+    val onMode = cameraUtils.getNextFlashMode(ImageCapture.FLASH_MODE_AUTO)
+    assertEquals(ImageCapture.FLASH_MODE_ON, onMode)
+    val offMode = cameraUtils.getNextFlashMode(ImageCapture.FLASH_MODE_ON)
+    assertEquals(ImageCapture.FLASH_MODE_OFF, offMode)
+    val autoMode = cameraUtils.getNextFlashMode(ImageCapture.FLASH_MODE_OFF)
+    assertEquals(ImageCapture.FLASH_MODE_AUTO, autoMode)
+
+    // 驗證刪除不存在檔案回傳 false
+    val item = PhotoItem(photoFile)
+    assertFalse(cameraUtils.deletePhoto(item))
   }
 
   /**

@@ -14,19 +14,15 @@ import androidx.camera.core.Camera
 import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
+import com.example.CameraUtils
 import com.example.ImageLoaderUtils
 import com.example.PhotoAdapter
 import com.example.PhotoItem
-import com.example.PhotoRepository
 import com.example.R
 import com.example.databinding.BottomSheetGalleryBinding
 import com.example.databinding.DialogPhotoDetailBinding
@@ -42,20 +38,18 @@ import java.util.concurrent.Executors
  * 相機拍攝與相簿管理畫面
  *
  * 用途：
- * 1. 繼承 [BaseBindingFragment]，使用 CameraX 實現相機即時預覽與低延遲拍照
- * 2. 支援相機執行時期權限動態請求與權限被拒的替代 UI 引導
- * 3. 具備前後鏡頭切換 (Lens Facing) 與閃光燈模式切換 (Auto / On / Off)
- * 4. 支援雙指縮放 (Pinch-to-zoom) 與點擊畫面測光對焦 (Tap-to-focus) 動畫
- * 5. 拍照快門白光閃爍反饋動畫，並儲存高解析度照片
- * 6. 左下角即時更新最新相片縮圖、拍攝數量徽章，支援快速刪除
- * 7. 提供底部滑出式相簿 (BottomSheetDialog) 與全螢幕大圖檢視/刪除功能
+ * 1. 繼承 [BaseBindingFragment]，使用 ViewBinding 自動管理視圖
+ * 2. 透過 [CameraUtils] 整合相機生命週期、預覽、拍照、儲存、刪除與照片查詢等核心功能
+ * 3. 處理相機動態權限請求、前後鏡頭切換動畫、閃光燈模式提示
+ * 4. 支援雙指縮放 (Pinch to zoom) 與點擊測光對焦動畫 (Tap to focus)
+ * 5. 即時更新最新相片縮圖、拍攝張數徽章，並提供底部相簿 (BottomSheetDialog) 與全螢幕大圖檢視
  */
 class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
 
     /**
-     * 照片儲存與檔案管理 Repository
+     * 相機與相片工具類別，封裝相機拍照、檔案儲存、刪除與查詢功能
      */
-    private lateinit var photoRepository: PhotoRepository
+    private lateinit var cameraUtils: CameraUtils
 
     /**
      * CameraX 背景拍照任務執行緒池
@@ -63,7 +57,7 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
     private lateinit var cameraExecutor: ExecutorService
 
     /**
-     * CameraX 拍照使用案例
+     * CameraX 拍照 UseCase
      */
     private var imageCapture: ImageCapture? = null
 
@@ -119,12 +113,13 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
     }
 
     /**
-     * 視圖初始化：建立 Repository、執行緒池、檢查相機權限與載入歷史相片縮圖
+     * 視圖初始化：建立 CameraUtils、執行緒池、檢查權限並載入歷史照片縮圖
      */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        photoRepository = PhotoRepository(requireContext())
+        // 初始化 CameraUtils 工具類別
+        cameraUtils = CameraUtils(requireContext())
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         checkCameraPermission()
@@ -210,7 +205,7 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
 
         // 快速刪除最新一張照片
         b.btnQuickDelete.setOnClickListener {
-            val latest = photoRepository.getLatestPhoto()
+            val latest = cameraUtils.getLatestPhoto()
             if (latest != null) {
                 showDeleteConfirmDialog(latest)
             }
@@ -229,9 +224,8 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
             requireContext(),
             object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
                 override fun onScale(detector: ScaleGestureDetector): Boolean {
-                    val currentZoomRatio = cameraInfo?.zoomState?.value?.zoomRatio ?: 1f
-                    val delta = detector.scaleFactor
-                    cameraControl?.setZoomRatio(currentZoomRatio * delta)
+                    // 透過 CameraUtils 套用縮放比例
+                    cameraUtils.applyZoom(cameraControl, cameraInfo, detector.scaleFactor)
                     return true
                 }
             }
@@ -243,9 +237,9 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
             if (event.action == MotionEvent.ACTION_UP && !scaleGestureDetector.isInProgress) {
                 val factory = b.viewFinder.meteringPointFactory
                 val point = factory.createPoint(event.x, event.y)
-                val action = FocusMeteringAction.Builder(point).build()
 
-                cameraControl?.startFocusAndMetering(action)
+                // 透過 CameraUtils 觸發測光對焦
+                cameraUtils.triggerFocusAndMetering(cameraControl, point)
 
                 // 於點擊座標展示對焦圓環動畫
                 showFocusRing(event.x, event.y)
@@ -280,49 +274,25 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
     }
 
     /**
-     * 綁定 CameraX 生命週期並啟動相機預覽與拍照實例
+     * 透過 CameraUtils 啟動相機並綁定生命週期
      */
     private fun startCamera() {
-        val context = context ?: return
         val b = binding ?: return
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
-        cameraProviderFuture.addListener({
-            if (!isAdded || binding == null) return@addListener
+        cameraUtils.startCamera(
+            lifecycleOwner = viewLifecycleOwner,
+            previewView = b.viewFinder,
+            lensFacing = lensFacing,
+            flashMode = flashMode,
+            onCameraBound = { boundCamera, boundCapture ->
+                if (!isAdded || binding == null) return@startCamera
 
-            try {
-                val cameraProvider = cameraProviderFuture.get()
-
-                // 配置相機預覽 UseCase
-                val preview = Preview.Builder().build().also {
-                    it.surfaceProvider = b.viewFinder.surfaceProvider
-                }
-
-                // 配置拍照 UseCase（最小延遲模式 + 當前閃光燈模式）
-                imageCapture = ImageCapture.Builder()
-                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                    .setFlashMode(flashMode)
-                    .build()
-
-                // 選擇前後鏡頭
-                val cameraSelector = CameraSelector.Builder()
-                    .requireLensFacing(lensFacing)
-                    .build()
-
-                cameraProvider.unbindAll()
-
-                // 綁定生命週期
-                camera = cameraProvider.bindToLifecycle(
-                    viewLifecycleOwner,
-                    cameraSelector,
-                    preview,
-                    imageCapture
-                )
-
-                cameraControl = camera?.cameraControl
-                cameraInfo = camera?.cameraInfo
-
-            } catch (exc: Exception) {
+                camera = boundCamera
+                imageCapture = boundCapture
+                cameraControl = boundCamera.cameraControl
+                cameraInfo = boundCamera.cameraInfo
+            },
+            onError = { exc ->
                 if (isAdded) {
                     Toast.makeText(
                         requireContext(),
@@ -331,11 +301,11 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
                     ).show()
                 }
             }
-        }, ContextCompat.getMainExecutor(context))
+        )
     }
 
     /**
-     * 執行拍照動作：觸發快門白色遮罩動畫，儲存相片至本機目錄
+     * 透過 CameraUtils 執行拍照並儲存照片
      */
     private fun takePhoto() {
         val imageCapture = imageCapture ?: return
@@ -352,38 +322,31 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
                 .start()
         }
 
-        // 產生新照片檔案路徑
-        val photoFile = photoRepository.createNewPhotoFile()
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-
-        // 執行背景拍照與存檔
-        imageCapture.takePicture(
-            outputOptions,
-            cameraExecutor,
-            object : ImageCapture.OnImageSavedCallback {
-                override fun onError(exc: ImageCaptureException) {
-                    activity?.runOnUiThread {
-                        if (isAdded) {
-                            Toast.makeText(
-                                requireContext(),
-                                getString(R.string.photo_save_failed, exc.message),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+        // 呼叫 CameraUtils 執行拍照存檔
+        cameraUtils.takePhoto(
+            imageCapture = imageCapture,
+            executor = cameraExecutor,
+            onImageSaved = {
+                activity?.runOnUiThread {
+                    if (isAdded) {
+                        Toast.makeText(
+                            requireContext(),
+                            getString(R.string.photo_saved_success),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        // 拍照儲存完成後更新最新縮圖
+                        updateRecentThumbnail()
                     }
                 }
-
-                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    activity?.runOnUiThread {
-                        if (isAdded) {
-                            Toast.makeText(
-                                requireContext(),
-                                getString(R.string.photo_saved_success),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            // 更新左下角最新縮圖與張數
-                            updateRecentThumbnail()
-                        }
+            },
+            onError = { exc ->
+                activity?.runOnUiThread {
+                    if (isAdded) {
+                        Toast.makeText(
+                            requireContext(),
+                            getString(R.string.photo_save_failed, exc.message),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
@@ -391,14 +354,10 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
     }
 
     /**
-     * 切換前置與後置鏡頭，並帶有 180 度圖示旋轉轉場動畫
+     * 切換鏡頭方向（前置/後置），並帶有 180 度圖示旋轉轉場動畫
      */
     private fun toggleCameraFacing() {
-        lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
-            CameraSelector.LENS_FACING_FRONT
-        } else {
-            CameraSelector.LENS_FACING_BACK
-        }
+        lensFacing = cameraUtils.toggleLensFacing(lensFacing)
         binding?.btnSwitchCamera?.animate()
             ?.rotationBy(180f)
             ?.setDuration(300)
@@ -407,42 +366,41 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
     }
 
     /**
-     * 切換閃光燈模式：自動 (Auto) -> 開啟 (On) -> 關閉 (Off) 循環切換
+     * 循環切換閃光燈模式：自動 (Auto) -> 開啟 (On) -> 關閉 (Off)
      */
     private fun toggleFlashMode() {
         val b = binding ?: return
+        flashMode = cameraUtils.getNextFlashMode(flashMode)
+
         when (flashMode) {
             ImageCapture.FLASH_MODE_AUTO -> {
-                flashMode = ImageCapture.FLASH_MODE_ON
+                b.btnFlash.setImageResource(R.drawable.ic_flash_auto)
+                b.btnFlash.contentDescription = getString(R.string.flash_auto)
+                Toast.makeText(requireContext(), getString(R.string.flash_auto), Toast.LENGTH_SHORT).show()
+            }
+            ImageCapture.FLASH_MODE_ON -> {
                 b.btnFlash.setImageResource(R.drawable.ic_flash_on)
                 b.btnFlash.contentDescription = getString(R.string.flash_on)
                 Toast.makeText(requireContext(), getString(R.string.flash_on), Toast.LENGTH_SHORT).show()
             }
-            ImageCapture.FLASH_MODE_ON -> {
-                flashMode = ImageCapture.FLASH_MODE_OFF
+            else -> {
                 b.btnFlash.setImageResource(R.drawable.ic_flash_off)
                 b.btnFlash.contentDescription = getString(R.string.flash_off)
                 Toast.makeText(requireContext(), getString(R.string.flash_off), Toast.LENGTH_SHORT).show()
-            }
-            else -> {
-                flashMode = ImageCapture.FLASH_MODE_AUTO
-                b.btnFlash.setImageResource(R.drawable.ic_flash_auto)
-                b.btnFlash.contentDescription = getString(R.string.flash_auto)
-                Toast.makeText(requireContext(), getString(R.string.flash_auto), Toast.LENGTH_SHORT).show()
             }
         }
         imageCapture?.flashMode = flashMode
     }
 
     /**
-     * 讀取儲存庫最新拍攝照片，非同步取樣壓縮解碼並更新左下角縮圖與照片數量徽章
+     * 透過 CameraUtils 讀取最新相片，更新左下角縮圖與照片張數徽章
      */
     private fun updateRecentThumbnail() {
         val b = binding ?: return
         if (!isAdded) return
 
-        val photos = photoRepository.getAllPhotos()
-        val latest = photos.firstOrNull()
+        val photos = cameraUtils.getAllPhotos()
+        val latest = cameraUtils.getLatestPhoto()
 
         if (latest != null && latest.file.exists()) {
             b.tvPhotoCountBadge.text = photos.size.toString()
@@ -468,7 +426,7 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
 
     /**
      * 開啟底部彈出式相簿 (BottomSheetDialog)
-     * 使用 3 欄式網格呈現所有歷史拍攝相片，支援點擊檢視與個別刪除
+     * 透過 CameraUtils 取得歷史相片清單，支援點擊檢視與刪除
      */
     private fun openGalleryBottomSheet() {
         val context = requireContext()
@@ -492,7 +450,7 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
         sheetBinding.rvPhotos.layoutManager = GridLayoutManager(context, 3)
         sheetBinding.rvPhotos.adapter = adapter
 
-        val photos = photoRepository.getAllPhotos()
+        val photos = cameraUtils.getAllPhotos()
         updateGalleryUI(sheetBinding, photos, adapter)
 
         sheetBinding.btnCloseGallery.setOnClickListener {
@@ -528,14 +486,13 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
         sheetBinding: BottomSheetGalleryBinding,
         adapter: PhotoAdapter
     ) {
-        val updatedPhotos = photoRepository.getAllPhotos()
+        val updatedPhotos = cameraUtils.getAllPhotos()
         updateGalleryUI(sheetBinding, updatedPhotos, adapter)
         updateRecentThumbnail()
     }
 
     /**
      * 顯示全螢幕相片詳情彈窗
-     * 包含檔名、拍攝時間、檔案大小與大圖檢視，並提供刪除選項
      *
      * @param photo 點選的照片物件
      */
@@ -574,7 +531,7 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
     }
 
     /**
-     * 彈出刪除相片的二次確認對話框
+     * 彈出刪除相片的二次確認對話框，透過 CameraUtils 執行刪除
      *
      * @param photo 欲刪除的照片物件
      * @param onDeleted 刪除成功後的回呼函式
@@ -586,7 +543,8 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
             .setMessage(R.string.delete_photo_confirm_message)
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.delete) { _, _ ->
-                val success = photoRepository.deletePhoto(photo)
+                // 透過 CameraUtils 執行刪除
+                val success = cameraUtils.deletePhoto(photo)
                 if (success) {
                     if (isAdded) {
                         Toast.makeText(requireContext(), getString(R.string.photo_deleted_success), Toast.LENGTH_SHORT).show()
@@ -603,7 +561,7 @@ class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
     }
 
     /**
-     * 視圖銷毀時清理相機執行緒與彈窗實例
+     * 視圖銷毀時釋放相機背景執行緒與彈窗資源
      */
     override fun onDestroyView() {
         super.onDestroyView()
