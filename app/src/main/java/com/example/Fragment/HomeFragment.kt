@@ -3,32 +3,23 @@ package com.example.Fragment
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
-import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.HomeAdapter
 import com.example.HomeFeatureItem
 import com.example.R
 import com.example.databinding.FragmentHomeBinding
+import com.example.viewBinding.BaseBindingFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.Locale
 
-class HomeFragment : Fragment() {
+class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
 
-    private var _binding: FragmentHomeBinding? = null
-    private val binding get() = _binding!!
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        _binding = FragmentHomeBinding.inflate(inflater, container, false)
-        return binding.root
+    override fun onCreateViewBinding(layoutInflater: LayoutInflater): FragmentHomeBinding? {
+        return FragmentHomeBinding.inflate(layoutInflater)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -51,7 +42,7 @@ class HomeFragment : Fragment() {
             currentTag.startsWith("zh-cn", ignoreCase = true) || currentTag.startsWith("zh-hans", ignoreCase = true) -> "簡體中文"
             else -> "繁體中文"
         }
-        binding.tvCurrentLanguageBadge.text = displayName
+        binding?.tvCurrentLanguageBadge?.text = displayName
     }
 
     private fun getCurrentLanguageTag(): String {
@@ -96,7 +87,7 @@ class HomeFragment : Fragment() {
             )
         )
 
-        binding.rvFeatures.apply {
+        binding?.rvFeatures?.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = HomeAdapter(featureItems)
         }
@@ -133,10 +124,5 @@ class HomeFragment : Fragment() {
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }

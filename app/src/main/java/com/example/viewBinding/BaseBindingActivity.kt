@@ -12,8 +12,8 @@ abstract class BaseBindingActivity<VB : ViewBinding?> : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = onCreateViewBinding(getLayoutInflater())
-        setContentView(binding!!.getRoot())
+        binding = onCreateViewBinding(layoutInflater)
+        binding?.root?.let { setContentView(it) }
     }
 
     protected abstract fun onCreateViewBinding(layoutInflater: LayoutInflater): VB?

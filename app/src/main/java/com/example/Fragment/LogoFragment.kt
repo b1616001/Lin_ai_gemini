@@ -3,37 +3,28 @@ package com.example.Fragment
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.R
 import com.example.databinding.FragmentLogoBinding
+import com.example.viewBinding.BaseBindingFragment
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class LogoFragment : Fragment() {
-
-    private var _binding: FragmentLogoBinding? = null
-    private val binding get() = _binding!!
+class LogoFragment : BaseBindingFragment<FragmentLogoBinding>() {
 
     private var timerJob: Job? = null
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        _binding = FragmentLogoBinding.inflate(inflater, container, false)
-        return binding.root
+    override fun onCreateViewBinding(layoutInflater: LayoutInflater): FragmentLogoBinding? {
+        return FragmentLogoBinding.inflate(layoutInflater)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         // Allow tapping the screen to proceed immediately without waiting
-        binding.root.setOnClickListener {
+        binding?.root?.setOnClickListener {
             timerJob?.cancel()
             navigateToHome()
         }
@@ -42,7 +33,7 @@ class LogoFragment : Fragment() {
         timerJob = viewLifecycleOwner.lifecycleScope.launch {
             for (remaining in 3 downTo 1) {
                 if (!isAdded) return@launch
-                binding.tvLogoTimerHint.text = "${remaining}s..."
+                binding?.tvLogoTimerHint?.text = "${remaining}s..."
                 delay(1000L)
             }
             if (isAdded) {
@@ -63,6 +54,5 @@ class LogoFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         timerJob?.cancel()
-        _binding = null
     }
 }

@@ -7,7 +7,6 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -21,7 +20,6 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
@@ -33,16 +31,14 @@ import com.example.R
 import com.example.databinding.BottomSheetGalleryBinding
 import com.example.databinding.DialogPhotoDetailBinding
 import com.example.databinding.FragmentCameraBinding
+import com.example.viewBinding.BaseBindingFragment
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class CameraFragment : Fragment() {
-
-    private var _binding: FragmentCameraBinding? = null
-    private val binding get() = _binding!!
+class CameraFragment : BaseBindingFragment<FragmentCameraBinding>() {
 
     private lateinit var photoRepository: PhotoRepository
     private lateinit var cameraExecutor: ExecutorService
@@ -67,13 +63,8 @@ class CameraFragment : Fragment() {
         }
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        _binding = FragmentCameraBinding.inflate(inflater, container, false)
-        return binding.root
+    override fun onCreateViewBinding(layoutInflater: LayoutInflater): FragmentCameraBinding? {
+        return FragmentCameraBinding.inflate(layoutInflater)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -102,7 +93,7 @@ class CameraFragment : Fragment() {
     }
 
     private fun setupCameraUI() {
-        _binding?.let { b ->
+        binding?.let { b ->
             b.layoutPermission.visibility = View.GONE
             b.topBar.visibility = View.VISIBLE
             b.bottomBar.visibility = View.VISIBLE
@@ -111,7 +102,7 @@ class CameraFragment : Fragment() {
     }
 
     private fun showPermissionDeniedUI() {
-        _binding?.let { b ->
+        binding?.let { b ->
             b.layoutPermission.visibility = View.VISIBLE
             b.topBar.visibility = View.GONE
             b.bottomBar.visibility = View.GONE
@@ -119,31 +110,33 @@ class CameraFragment : Fragment() {
     }
 
     private fun setupListeners() {
-        binding.btnBack.setOnClickListener {
+        val b = binding ?: return
+
+        b.btnBack.setOnClickListener {
             findNavController().navigateUp()
         }
 
-        binding.btnGrantPermission.setOnClickListener {
+        b.btnGrantPermission.setOnClickListener {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
 
-        binding.btnCapture.setOnClickListener {
+        b.btnCapture.setOnClickListener {
             takePhoto()
         }
 
-        binding.btnSwitchCamera.setOnClickListener {
+        b.btnSwitchCamera.setOnClickListener {
             toggleCameraFacing()
         }
 
-        binding.btnFlash.setOnClickListener {
+        b.btnFlash.setOnClickListener {
             toggleFlashMode()
         }
 
-        binding.layoutGallery.setOnClickListener {
+        b.layoutGallery.setOnClickListener {
             openGalleryBottomSheet()
         }
 
-        binding.btnQuickDelete.setOnClickListener {
+        b.btnQuickDelete.setOnClickListener {
             val latest = photoRepository.getLatestPhoto()
             if (latest != null) {
                 showDeleteConfirmDialog(latest)
@@ -154,6 +147,7 @@ class CameraFragment : Fragment() {
     }
 
     private fun setupFocusAndZoom() {
+        val b = binding ?: return
         val scaleGestureDetector = ScaleGestureDetector(
             requireContext(),
             object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -166,11 +160,11 @@ class CameraFragment : Fragment() {
             }
         )
 
-        binding.viewFinder.setOnTouchListener { view, event ->
+        b.viewFinder.setOnTouchListener { view, event ->
             scaleGestureDetector.onTouchEvent(event)
 
             if (event.action == MotionEvent.ACTION_UP && !scaleGestureDetector.isInProgress) {
-                val factory = binding.viewFinder.meteringPointFactory
+                val factory = b.viewFinder.meteringPointFactory
                 val point = factory.createPoint(event.x, event.y)
                 val action = FocusMeteringAction.Builder(point).build()
 
@@ -185,7 +179,7 @@ class CameraFragment : Fragment() {
     }
 
     private fun showFocusRing(x: Float, y: Float) {
-        _binding?.focusRing?.apply {
+        binding?.focusRing?.apply {
             this.x = x - (width / 2f)
             this.y = y - (height / 2f)
             visibility = View.VISIBLE
@@ -204,16 +198,17 @@ class CameraFragment : Fragment() {
 
     private fun startCamera() {
         val context = context ?: return
+        val b = binding ?: return
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
         cameraProviderFuture.addListener({
-            if (!isAdded || _binding == null) return@addListener
+            if (!isAdded || binding == null) return@addListener
 
             try {
                 val cameraProvider = cameraProviderFuture.get()
 
                 val preview = Preview.Builder().build().also {
-                    it.surfaceProvider = binding.viewFinder.surfaceProvider
+                    it.surfaceProvider = b.viewFinder.surfaceProvider
                 }
 
                 imageCapture = ImageCapture.Builder()
@@ -251,10 +246,10 @@ class CameraFragment : Fragment() {
 
     private fun takePhoto() {
         val imageCapture = imageCapture ?: return
-        if (_binding == null) return
+        val b = binding ?: return
 
         // Shutter feedback animation
-        binding.captureFlashOverlay.apply {
+        b.captureFlashOverlay.apply {
             visibility = View.VISIBLE
             alpha = 0.85f
             animate()
@@ -305,31 +300,32 @@ class CameraFragment : Fragment() {
         } else {
             CameraSelector.LENS_FACING_BACK
         }
-        binding.btnSwitchCamera.animate()
-            .rotationBy(180f)
-            .setDuration(300)
-            .start()
+        binding?.btnSwitchCamera?.animate()
+            ?.rotationBy(180f)
+            ?.setDuration(300)
+            ?.start()
         startCamera()
     }
 
     private fun toggleFlashMode() {
+        val b = binding ?: return
         when (flashMode) {
             ImageCapture.FLASH_MODE_AUTO -> {
                 flashMode = ImageCapture.FLASH_MODE_ON
-                binding.btnFlash.setImageResource(R.drawable.ic_flash_on)
-                binding.btnFlash.contentDescription = getString(R.string.flash_on)
+                b.btnFlash.setImageResource(R.drawable.ic_flash_on)
+                b.btnFlash.contentDescription = getString(R.string.flash_on)
                 Toast.makeText(requireContext(), getString(R.string.flash_on), Toast.LENGTH_SHORT).show()
             }
             ImageCapture.FLASH_MODE_ON -> {
                 flashMode = ImageCapture.FLASH_MODE_OFF
-                binding.btnFlash.setImageResource(R.drawable.ic_flash_off)
-                binding.btnFlash.contentDescription = getString(R.string.flash_off)
+                b.btnFlash.setImageResource(R.drawable.ic_flash_off)
+                b.btnFlash.contentDescription = getString(R.string.flash_off)
                 Toast.makeText(requireContext(), getString(R.string.flash_off), Toast.LENGTH_SHORT).show()
             }
             else -> {
                 flashMode = ImageCapture.FLASH_MODE_AUTO
-                binding.btnFlash.setImageResource(R.drawable.ic_flash_auto)
-                binding.btnFlash.contentDescription = getString(R.string.flash_auto)
+                b.btnFlash.setImageResource(R.drawable.ic_flash_auto)
+                b.btnFlash.contentDescription = getString(R.string.flash_auto)
                 Toast.makeText(requireContext(), getString(R.string.flash_auto), Toast.LENGTH_SHORT).show()
             }
         }
@@ -337,28 +333,29 @@ class CameraFragment : Fragment() {
     }
 
     private fun updateRecentThumbnail() {
-        if (_binding == null || !isAdded) return
+        val b = binding ?: return
+        if (!isAdded) return
 
         val photos = photoRepository.getAllPhotos()
         val latest = photos.firstOrNull()
 
         if (latest != null && latest.file.exists()) {
-            binding.tvPhotoCountBadge.text = photos.size.toString()
-            binding.tvPhotoCountBadge.visibility = View.VISIBLE
-            binding.btnQuickDelete.visibility = View.VISIBLE
+            b.tvPhotoCountBadge.text = photos.size.toString()
+            b.tvPhotoCountBadge.visibility = View.VISIBLE
+            b.btnQuickDelete.visibility = View.VISIBLE
 
             viewLifecycleOwner.lifecycleScope.launch {
                 val bitmap = ImageLoaderUtils.loadBitmapSampled(latest.file, 120, 120)
-                if (bitmap != null && _binding != null) {
-                    binding.ivRecentThumbnail.setImageBitmap(bitmap)
-                    binding.ivRecentThumbnail.clearColorFilter()
+                if (bitmap != null && binding != null) {
+                    binding?.ivRecentThumbnail?.setImageBitmap(bitmap)
+                    binding?.ivRecentThumbnail?.clearColorFilter()
                 }
             }
         } else {
-            binding.tvPhotoCountBadge.visibility = View.GONE
-            binding.btnQuickDelete.visibility = View.GONE
-            binding.ivRecentThumbnail.setImageResource(R.drawable.ic_photo_library)
-            binding.ivRecentThumbnail.setColorFilter(
+            b.tvPhotoCountBadge.visibility = View.GONE
+            b.btnQuickDelete.visibility = View.GONE
+            b.ivRecentThumbnail.setImageResource(R.drawable.ic_photo_library)
+            b.ivRecentThumbnail.setColorFilter(
                 ContextCompat.getColor(requireContext(), R.color.icon_tint)
             )
         }
@@ -482,6 +479,5 @@ class CameraFragment : Fragment() {
         activeGalleryDialog?.dismiss()
         activeGalleryDialog = null
         cameraExecutor.shutdown()
-        _binding = null
     }
 }

@@ -19,8 +19,8 @@ abstract class BaseBindingFragment<VB : ViewBinding?> : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        binding = onCreateViewBinding(getLayoutInflater())
-        return binding!!.getRoot()
+        binding = onCreateViewBinding(inflater)
+        return binding?.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -35,7 +35,7 @@ abstract class BaseBindingFragment<VB : ViewBinding?> : Fragment() {
     protected abstract fun onCreateViewBinding(layoutInflater: LayoutInflater): VB?
 
     override fun onResume() {
-        mainActivity!!.currentFragment = javaClass.getSimpleName()
+        mainActivity?.currentFragment = javaClass.simpleName
         super.onResume()
         //
 //        requireActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
