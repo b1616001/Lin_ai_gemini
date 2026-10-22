@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardNote"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="6dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardBackgroundColor="@color/home_card_bg"
+    app:cardCornerRadius="16dp"
+    app:strokeColor="@color/home_card_stroke"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Top Header: Category Badge + Timestamp + Edit & Delete Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvNoteCategory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_pill"
+                android:backgroundTint="@color/lin_blue_container"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="3dp"
+                android:text="工作"
+                android:textColor="@color/lin_blue_light"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvNoteTime"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                tools:text="2026/10/21 17:30" />
+
+            <!-- Edit Button -->
+            <ImageButton
+                android:id="@+id/btnEditNote"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_control_button"
+                android:contentDescription="@string/room_edit_note"
+                android:src="@drawable/ic_edit"
+                app:tint="@color/text_primary" />
+
+            <!-- Delete Button -->
+            <ImageButton
+                android:id="@+id/btnDeleteNote"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_control_button"
+                android:contentDescription="@string/room_delete_note"
+                android:src="@drawable/ic_delete"
+                app:tint="@color/delete_red" />
+        </LinearLayout>
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/tvNoteTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            tools:text="Android 模組化重構筆記" />
+
+        <!-- Content -->
+        <TextView
+            android:id="@+id/tvNoteContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:ellipsize="end"
+            android:maxLines="3"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            tools:text="將 GPS、NFC 與 Room 資料庫各自抽取為獨立 Utils，實現清晰乾淨的架構。" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

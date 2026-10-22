@@ -68,6 +68,11 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
      *
      * @return 若 NavController 成功處理返回則回傳 true，否則交由父類別處理
      */
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
     override fun onSupportNavigateUp(): Boolean {
         return navController.navigateUp() || super.onSupportNavigateUp()
     }

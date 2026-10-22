@@ -7,7 +7,14 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.example.Utils.CameraUtils
+import com.example.Utils.GpsUtils
 import com.example.Utils.LanguageUtils
+import com.example.Utils.NfcUtils
+import com.example.Utils.RoomUtils
+import com.example.room.AppDatabase
+import com.example.room.NoteEntity
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -167,5 +174,136 @@ class ExampleRobolectricTest {
     assertEquals("繁體中文", LanguageUtils.getLanguageDisplayName("zh-TW"))
     assertTrue(LanguageUtils.SUPPORTED_LANGUAGES.isNotEmpty())
     assertNotNull(LanguageUtils.getCurrentLanguageTag())
+  }
+
+  /**
+   * 測試 GpsUtils 格式化函式與功能
+   */
+  @Test
+  fun `verify GpsUtils operations`() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val gpsUtils = GpsUtils(context)
+
+    val coords = gpsUtils.formatCoordinates(25.033964, 121.564468)
+    assertEquals("25.033964, 121.564468", coords)
+
+    val speed = gpsUtils.formatSpeed(10.0f)
+    assertTrue(speed.contains("36.0 km/h"))
+
+    val altitude = gpsUtils.formatAltitude(150.5)
+    assertTrue(altitude.contains("150.5 m"))
+
+    val accuracy = gpsUtils.formatAccuracy(3.2f)
+    assertTrue(accuracy.contains("3.2 m"))
+
+    val intent = gpsUtils.createLocationSettingsIntent()
+    assertNotNull(intent.action)
+  }
+
+  /**
+   * 測試 NfcUtils 格式轉換與設定 Intent
+   */
+  @Test
+  fun `verify NfcUtils operations`() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val nfcUtils = NfcUtils(context)
+
+    val bytes = byteArrayOf(0x04, 0xA2.toByte(), 0x3B.toByte(), 0x5C.toByte())
+    val hex = nfcUtils.bytesToHex(bytes)
+    assertEquals("04:A2:3B:5C", hex)
+
+    val dec = nfcUtils.bytesToDecimal(bytes)
+    assertTrue(dec.isNotEmpty())
+
+    val intent = nfcUtils.createNfcSettingsIntent()
+    assertNotNull(intent.action)
+  }
+
+  /**
+   * 測試 Room 資料庫 CRUD 業務邏輯 (新增、修改、刪除、搜尋)
+   */
+  @Test
+  fun `verify Room Database CRUD operations`() {
+    runBlocking {
+      val context = ApplicationProvider.getApplicationContext<Context>()
+      val repository = RoomUtils.getNoteRepository(context)
+
+      // 清空資料庫確保乾淨環境
+      repository.clearAll()
+
+      // 1. 新增記事 (Create)
+      val testNote = NoteEntity(
+        title = "測試筆記標題",
+        content = "這是測試內容",
+        category = "工作"
+      )
+      val insertedId = repository.insert(testNote)
+      assertTrue(insertedId > 0)
+
+      // 2. 查詢記事 (Read)
+      val listAfterInsert = repository.allNotes.first()
+      assertEquals(1, listAfterInsert.size)
+      assertEquals("測試筆記標題", listAfterInsert[0].title)
+
+      // 3. 修改記事 (Update)
+      val noteToUpdate = listAfterInsert[0].copy(title = "已修改的筆記標題")
+      repository.update(noteToUpdate)
+      val listAfterUpdate = repository.allNotes.first()
+      assertEquals("已修改的筆記標題", listAfterUpdate[0].title)
+
+      // 4. 關鍵字搜尋 (Search)
+      val searchResult = repository.searchNotes("修改").first()
+      assertEquals(1, searchResult.size)
+      val searchEmpty = repository.searchNotes("不存在的關鍵字").first()
+      assertEquals(0, searchEmpty.size)
+
+      // 5. 刪除記事 (Delete)
+      repository.delete(listAfterUpdate[0])
+      val listAfterDelete = repository.allNotes.first()
+      assertEquals(0, listAfterDelete.size)
+
+      // 6. 範例資料批次注入
+      RoomUtils.populateSampleData(repository)
+      val sampleList = repository.allNotes.first()
+      assertTrue(sampleList.size >= 4)
+
+      // 清理
+      repository.clearAll()
+    }
+  }
+
+  /**
+   * 測試 Navigation 導航支援跳轉至 GpsFragment、NfcFragment、RoomFragment
+   */
+  @Test
+  fun `verify navigation to Gps, Nfc, and Room fragments`() {
+    ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+      scenario.onActivity { activity ->
+        val navHostFragment = activity.supportFragmentManager
+          .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navController = navHostFragment.navController
+
+        // 前往首頁
+        navController.navigate(R.id.action_logoFragment_to_homeFragment)
+
+        // 測試導覽至 GPS 畫面
+        navController.navigate(R.id.action_homeFragment_to_gpsFragment)
+        assertEquals(R.id.gpsFragment, navController.currentDestination?.id)
+        navController.navigateUp()
+        assertEquals(R.id.homeFragment, navController.currentDestination?.id)
+
+        // 測試導覽至 NFC 畫面
+        navController.navigate(R.id.action_homeFragment_to_nfcFragment)
+        assertEquals(R.id.nfcFragment, navController.currentDestination?.id)
+        navController.navigateUp()
+        assertEquals(R.id.homeFragment, navController.currentDestination?.id)
+
+        // 測試導覽至 Room 畫面
+        navController.navigate(R.id.action_homeFragment_to_roomFragment)
+        assertEquals(R.id.roomFragment, navController.currentDestination?.id)
+        navController.navigateUp()
+        assertEquals(R.id.homeFragment, navController.currentDestination?.id)
+      }
+    }
   }
 }

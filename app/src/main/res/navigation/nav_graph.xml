@@ -31,6 +31,27 @@
             app:exitAnim="@android:anim/fade_out"
             app:popEnterAnim="@android:anim/fade_in"
             app:popExitAnim="@android:anim/fade_out" />
+        <action
+            android:id="@+id/action_homeFragment_to_gpsFragment"
+            app:destination="@id/gpsFragment"
+            app:enterAnim="@android:anim/fade_in"
+            app:exitAnim="@android:anim/fade_out"
+            app:popEnterAnim="@android:anim/fade_in"
+            app:popExitAnim="@android:anim/fade_out" />
+        <action
+            android:id="@+id/action_homeFragment_to_nfcFragment"
+            app:destination="@id/nfcFragment"
+            app:enterAnim="@android:anim/fade_in"
+            app:exitAnim="@android:anim/fade_out"
+            app:popEnterAnim="@android:anim/fade_in"
+            app:popExitAnim="@android:anim/fade_out" />
+        <action
+            android:id="@+id/action_homeFragment_to_roomFragment"
+            app:destination="@id/roomFragment"
+            app:enterAnim="@android:anim/fade_in"
+            app:exitAnim="@android:anim/fade_out"
+            app:popEnterAnim="@android:anim/fade_in"
+            app:popExitAnim="@android:anim/fade_out" />
     </fragment>
 
     <fragment
@@ -38,5 +59,23 @@
         android:name="com.example.Fragment.CameraFragment"
         android:label="Camera"
         tools:layout="@layout/fragment_camera" />
+
+    <fragment
+        android:id="@+id/gpsFragment"
+        android:name="com.example.Fragment.GpsFragment"
+        android:label="GPS"
+        tools:layout="@layout/fragment_gps" />
+
+    <fragment
+        android:id="@+id/nfcFragment"
+        android:name="com.example.Fragment.NfcFragment"
+        android:label="NFC"
+        tools:layout="@layout/fragment_nfc" />
+
+    <fragment
+        android:id="@+id/roomFragment"
+        android:name="com.example.Fragment.RoomFragment"
+        android:label="Room"
+        tools:layout="@layout/fragment_room" />
 
 </navigation>

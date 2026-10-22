@@ -67,19 +67,6 @@ class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
 
         val featureItems = listOf(
             HomeFeatureItem(
-                id = "languages",
-                title = getString(R.string.menu_languages),
-                description = "${getString(R.string.menu_languages_desc)} (${currentLangName})",
-                iconRes = R.drawable.ic_language,
-                testTag = "home_item_languages",
-                onClick = {
-                    LanguageUtils.showLanguageDialog(requireContext()) { _, _ ->
-                        setupLanguageBadge()
-                        setupRecyclerView()
-                    }
-                }
-            ),
-            HomeFeatureItem(
                 id = "camera",
                 title = getString(R.string.menu_camera),
                 description = getString(R.string.menu_camera_desc),
@@ -89,7 +76,58 @@ class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
                     try {
                         findNavController().navigate(R.id.action_homeFragment_to_cameraFragment)
                     } catch (_: Exception) {
-                        // 防止重複點擊導航觸發例外
+                    }
+                }
+            ),
+            HomeFeatureItem(
+                id = "gps",
+                title = getString(R.string.menu_gps),
+                description = getString(R.string.menu_gps_desc),
+                iconRes = R.drawable.ic_gps,
+                testTag = "home_item_gps",
+                onClick = {
+                    try {
+                        findNavController().navigate(R.id.action_homeFragment_to_gpsFragment)
+                    } catch (_: Exception) {
+                    }
+                }
+            ),
+            HomeFeatureItem(
+                id = "nfc",
+                title = getString(R.string.menu_nfc),
+                description = getString(R.string.menu_nfc_desc),
+                iconRes = R.drawable.ic_nfc,
+                testTag = "home_item_nfc",
+                onClick = {
+                    try {
+                        findNavController().navigate(R.id.action_homeFragment_to_nfcFragment)
+                    } catch (_: Exception) {
+                    }
+                }
+            ),
+            HomeFeatureItem(
+                id = "room",
+                title = getString(R.string.menu_room),
+                description = getString(R.string.menu_room_desc),
+                iconRes = R.drawable.ic_database,
+                testTag = "home_item_room",
+                onClick = {
+                    try {
+                        findNavController().navigate(R.id.action_homeFragment_to_roomFragment)
+                    } catch (_: Exception) {
+                    }
+                }
+            ),
+            HomeFeatureItem(
+                id = "languages",
+                title = getString(R.string.menu_languages),
+                description = "${getString(R.string.menu_languages_desc)} (${currentLangName})",
+                iconRes = R.drawable.ic_language,
+                testTag = "home_item_languages",
+                onClick = {
+                    LanguageUtils.showLanguageDialog(requireContext()) { _, _ ->
+                        setupLanguageBadge()
+                        setupRecyclerView()
                     }
                 }
             )
