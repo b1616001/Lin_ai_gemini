@@ -6,6 +6,8 @@ import androidx.camera.core.ImageCapture
 import androidx.navigation.fragment.NavHostFragment
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import com.example.Utils.CameraUtils
+import com.example.Utils.LanguageUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -152,5 +154,18 @@ class ExampleRobolectricTest {
         assertEquals(R.id.homeFragment, navController.currentDestination?.id)
       }
     }
+  }
+
+  /**
+   * 測試 LanguageUtils 語言標籤與顯示名稱解析
+   */
+  @Test
+  fun `verify LanguageUtils tag and display name mapping`() {
+    assertEquals("English", LanguageUtils.getLanguageDisplayName("en"))
+    assertEquals("日本語", LanguageUtils.getLanguageDisplayName("ja"))
+    assertEquals("簡體中文", LanguageUtils.getLanguageDisplayName("zh-CN"))
+    assertEquals("繁體中文", LanguageUtils.getLanguageDisplayName("zh-TW"))
+    assertTrue(LanguageUtils.SUPPORTED_LANGUAGES.isNotEmpty())
+    assertNotNull(LanguageUtils.getCurrentLanguageTag())
   }
 }

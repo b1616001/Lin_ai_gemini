@@ -26,11 +26,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.CameraUtils
-import com.example.ImageLoaderUtils
 import com.example.PhotoAdapter
 import com.example.PhotoItem
 import com.example.R
+import com.example.Utils.CameraUtils
+import com.example.Utils.ImageLoaderUtils
 import com.example.databinding.BottomSheetGalleryBinding
 import com.example.databinding.DialogPhotoDetailBinding
 import com.example.databinding.FragmentCameraBinding

@@ -1,4 +1,4 @@
-package com.example
+package com.example.Utils
 
 import android.content.Context
 import androidx.camera.core.Camera
@@ -14,6 +14,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import com.example.PhotoItem
+import com.example.PhotoRepository
 import java.io.File
 import java.util.concurrent.Executor
 
